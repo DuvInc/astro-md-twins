@@ -1,0 +1,44 @@
+# Response headers for static hosts that read this file (Cloudflare Workers
+# assets, Cloudflare Pages, Netlify).
+#
+# Astro copies public/ into dist/ verbatim, so this ships with the build.
+#
+# What is NOT here, and cannot be: a rule targeting `*.md`. Cloudflare's
+# patterns allow one trailing splat, so there is no way to select every
+# Markdown twin by extension. Two consequences worth knowing before you delete
+# the Worker:
+#
+#   - The Content-Type of a `.md` file comes from the host's extension table.
+#     Cloudflare and Netlify send `text/markdown`. Some CDNs send
+#     `application/octet-stream`, which makes browsers download the file and
+#     makes some agents skip it. Check with:
+#       curl -sI https://your-site/about.md | grep -i content-type
+#
+#   - The `Link: <page>; rel="canonical"` header on Markdown responses is set
+#     by worker/index.ts. Without the Worker, the canonical survives only in
+#     the file's own front matter, which a search crawler does not read. If you
+#     serve twins from a host that cannot set per-file headers, set
+#     `markdownPolicy: 'noindex'` in src/site.config.ts and add a
+#     `Disallow: /*.md$` for search crawlers instead.
+
+/*
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), geolocation=(), microphone=()
+
+# Content-addressed: the filename changes whenever the bytes do, so a repeat
+# visitor never revalidates the CSS or the fonts.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Machine-readable surfaces. Short freshness window: an agent reading them
+# should not be handed last week's index, and they are cheap to revalidate.
+/llms.txt
+  Cache-Control: public, max-age=300
+  Content-Type: text/plain; charset=utf-8
+
+/llms-full.txt
+  Cache-Control: public, max-age=300
+  Content-Type: text/plain; charset=utf-8

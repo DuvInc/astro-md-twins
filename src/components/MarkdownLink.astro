@@ -1,0 +1,24 @@
+---
+import { markdownPathFor } from '../lib/pages';
+
+/**
+ * "Read as Markdown", pointing at this page's twin.
+ *
+ * Deliberately a plain link rather than a copy-to-clipboard button: the URL is
+ * the thing worth having. A reader can paste it into an assistant, an agent
+ * can follow it, and a crawler that renders the page finds one more route to
+ * the Markdown than the headers alone would give it.
+ */
+interface Props {
+  path: string;
+}
+
+const { path } = Astro.props;
+---
+
+<a class="md-link" href={markdownPathFor(path)} data-astro-prefetch="false">
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <path d="M2 4h12M2 8h8M2 12h10" />
+  </svg>
+  .md
+</a>

@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "astro-md-twins",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+
+    /*
+     * The Worker runs first, for every request, so it can negotiate.
+     *
+     * The alternative, `assets_navigation_prefer_asset`, serves the file and
+     * never calls the Worker, which is faster and cannot negotiate anything.
+     * The cost here is one Worker invocation per document; the `not_found`
+     * handling and every fingerprinted asset still short-circuit in
+     * `isDocument`.
+     */
+    "run_worker_first": true,
+    "not_found_handling": "404-page"
+  },
+
+  /* `wrangler tail` and Workers Logs, which is where the one structured line
+     per AI crawler hit shows up. Free, and the only measurement this repo
+     ships with. */
+  "observability": {
+    "enabled": true
+  }
+}
