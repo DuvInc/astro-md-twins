@@ -1,52 +1,59 @@
 # astro-md-twins
 
-**Every page, twice: HTML for people, Markdown for machines.**
+Every page on this site exists twice. Once as HTML, for people. Once as
+Markdown, for machines.
 
-An Astro site where each page also exists as clean Markdown, at the same path
-plus `.md` and at the same URL under `Accept: text/markdown`, with the
-canonical, `Vary` and `robots` handling that keeps publishing everything twice
-from becoming a duplicate-content problem.
+This is an Astro template. It builds a static site. For each page it also
+builds a Markdown file at the same path plus `.md`. An optional Cloudflare
+Worker serves the same Markdown from the page URL when a client sends
+`Accept: text/markdown`.
 
 ```bash
 npm install
-npm run dev          # http://localhost:4321
-npm test             # build, then assert every page has a correct twin
+npm run dev     # http://localhost:4321
+npm test        # build, then check every page has a correct twin
 ```
+
+Try it on the built site:
 
 ```bash
-curl https://your-site/about.md                          # the twin
-curl -H "Accept: text/markdown" https://your-site/about   # the same bytes, same URL
+curl https://your-site/about.md                          # the Markdown file
+curl -H "Accept: text/markdown" https://your-site/about  # the same bytes
 ```
 
-The demo site is its own documentation: the pages explain the technique, and
-they are served by it. Append `.md` to any of them to read the same page the
-way a crawler does. What is worth copying is `src/lib/`,
-`src/pages/[...slug].md.ts`, `worker/index.ts` and the two files that explain
-the decisions: this one and [AGENTS.md](./AGENTS.md).
+The demo site documents the technique. Add `.md` to any page to read it as a
+crawler does.
 
-## Why bother
+## What you get
 
-### Machines are a real share of your traffic, and HTML is an expensive way to talk to them
+- A Markdown file for every page, built at build time. No runtime needed.
+- Content negotiation on the page URL, through an optional Worker.
+- A canonical link on every Markdown response. Search engines credit the HTML
+  page, not the copy.
+- `llms.txt` and `llms-full.txt`. Both link to the `.md` files.
+- A build check. It fails if a page has no twin, a twin has the wrong
+  canonical, a twin is empty, or a twin reached the sitemap.
 
-An HTML page is mostly not content. Navigation, footers, consent banners,
-analytics, class attributes: all of it is downloaded and parsed to recover the
-three paragraphs that mattered.
+## Why do this
 
-Cloudflare benchmarked an ordinary blog post in February 2026 at **16,180
-tokens as HTML and 3,150 as Markdown**, an 80% reduction. Commerce pages, which
-carry more markup per sentence, have been measured at 95%. One analysis put
-retrieval accuracy on Markdown at 35% above the same content as HTML, which is
-the more interesting number: less markup is not only cheaper, it is less noise
-between the model and your sentences.
+### HTML is expensive to read
 
-### They fetch the Markdown when you publish it
+An HTML page contains navigation, footers, banners, scripts and class
+attributes. A machine downloads all of it. It needs three paragraphs.
 
-This is the part that is usually asserted and rarely measured. Two independent
-measurements, both from server logs rather than from a vendor:
+Cloudflare measured one blog post in February 2026. It used 16,180 tokens as
+HTML and 3,150 tokens as Markdown. That is 80% less. Commerce pages have been
+measured at 95% less. One test found retrieval accuracy 35% higher on Markdown
+than on the same content as HTML.
 
-**On my own documentation site** (`ai-glot.com/docs`, 19 August to 14 September
-2026, Cloudflare-verified bots only, so no spoofed User-Agents), counting only
-document requests, HTML pages plus Markdown twins:
+### Crawlers use the Markdown when it exists
+
+Two measurements from server logs, not from vendors.
+
+The first is my own documentation site, `ai-glot.com/docs`. The window is 19
+August to 14 September 2026. Only Cloudflare-verified bots are counted, so no
+User-Agent is trusted. The table counts document requests only: HTML pages plus
+Markdown twins.
 
 | Crawler | Documents fetched | Taken as `.md` | Share |
 | :--- | ---: | ---: | ---: |
@@ -57,17 +64,14 @@ document requests, HTML pages plus Markdown twins:
 | PetalBot | 8,788 | 1,159 | 13.2% |
 | meta-externalagent | 9,013 | 1,025 | 11.4% |
 
-**Independently**, Dries Buytaert published the same split for his own site and
-found GPTBot taking 34.8% of its requests as Markdown and OAI-SearchBot 22.7%,
-with ClaudeBot far lower at 2.1%.
+The second is Dries Buytaert's site. He measured GPTBot at 34.8% and
+OAI-SearchBot at 22.7%. ClaudeBot was much lower, at 2.1%.
 
-The numbers differ, the shape does not: for the OpenAI and Google crawlers,
-something between a third and a half of what they fetch is the Markdown, as
-soon as the Markdown exists. Nobody had to be told about it.
+The numbers differ per site. The pattern is the same. The OpenAI and Google
+crawlers take the Markdown for a large share of what they fetch. Nobody
+configured this. They found the links.
 
-### Two doors, and the crawlers only use one of them
-
-There are two ways to serve Markdown, and they reach different clients.
+### There are two ways to serve Markdown. Crawlers use one of them
 
 ```text
   WHO IS ASKING                 WHAT THEY SEND            WHAT COMES BACK
@@ -88,222 +92,193 @@ There are two ways to serve Markdown, and they reach different clients.
   (GPTBot, ClaudeBot, ...)                                same headers, no Worker needed
 ```
 
-The third row is the one that carries the traffic, and it is a plain file on
-disk. The second needs a server and reaches assistants rather than crawlers.
-
 | | `<page>.md` | `Accept: text/markdown` |
 | :--- | :--- | :--- |
-| Who uses it | AI crawlers, in the numbers above | coding agents (Claude Code, OpenCode) |
-| How it is found | links, `llms.txt`, `Link` headers | the client just asks |
-| Needs a server | no, it is a file | yes, or a CDN feature |
+| Who uses it | AI crawlers | coding agents |
+| How they find it | links, `llms.txt`, `Link` headers | they ask for it |
+| Needs a server | no | yes, or a CDN feature |
 
-Buytaert's measurement is blunt about the second: *"No AI crawler uses content
-negotiation. Not one."* Cloudflare shipped Markdown for Agents as a zone
-feature and Read the Docs supports the header, so it works, but the traffic is
-from assistants a person is driving, not from crawlers.
+Buytaert's report is direct about the second column: *"No AI crawler uses
+content negotiation. Not one."* Cloudflare ships negotiation as a zone feature
+and Read the Docs supports the header, so it works. The traffic comes from
+assistants that a person is using, not from crawlers.
 
-**So ship both, and expect the traffic on the file.** A repository that
-implements only negotiation has built the elegant half and will see close to
-nothing in its logs. This one generates real `.md` files at build time, which
-work on any static host, and adds negotiation through an optional Worker.
+Build both. Expect the traffic on the file. This template writes real `.md`
+files at build time, so they work on any static host. The Worker adds
+negotiation on top.
 
-### What it does not do
+### What this does not do
 
-Worth knowing before you build it, because most articles on this leave it out.
-
-- **It does not reduce crawl traffic.** Crawlers fetch the twins *in addition
-  to* the pages. Buytaert measured about 7% more crawler traffic after adding
-  Markdown. If the goal was saving bandwidth, this is the wrong lever.
-- **`llms.txt` has no demonstrated effect.** A Search Engine Journal analysis
-  of 300,000 domains found no measurable link between having one and being
-  cited, no major provider has committed to reading it, and sites that check
-  their logs mostly find it fetched by SEO audit tools. This repository ships
-  one because it costs a generated file and its links point at the `.md` URLs
-  that crawlers do follow. Treat it as a sitemap for agents, not a ranking
-  factor.
+- **It does not reduce crawler traffic.** Crawlers fetch the twins in addition
+  to the pages. Buytaert measured about 7% more crawler traffic after adding
+  Markdown.
+- **`llms.txt` has no proven effect.** Search Engine Journal analysed 300,000
+  domains and found no measurable link between having one and being cited. No
+  major provider has committed to reading it. Sites that check their logs
+  mostly see SEO tools fetch it. This template ships one because it costs one
+  generated file, and because its links point at the `.md` URLs that crawlers
+  do follow.
 - **It is not a ranking factor.** Nothing here makes Google rank you higher.
-  What it changes is the cost and fidelity of being read by the systems that
-  increasingly sit between your page and a reader.
-- **Citations are not traffic.** Buytaert's site recorded 1,241 pages crawled
-  per citation received. Publishing for machines is publishing, with the
-  attribution economics that implies.
+- **Citations are rare.** Buytaert recorded 1,241 pages crawled for each
+  citation received.
 
-### It is not cloaking, and the distinction is precise
+### This is not cloaking
 
-Cloaking is serving a crawler different **content** from what a person gets.
-Content negotiation is serving the same document in a different **format**,
-which HTTP has done since 1997 and for which Markdown has had a registered
-media type since RFC 7763 in 2016.
+Cloaking means serving a crawler different content from what a person gets.
+Content negotiation means serving the same content in a different format. HTTP
+has done this since 1997. Markdown has had a registered media type since RFC
+7763 in 2016.
 
-The real risk is duplicate content, and it appears the moment the Markdown gets
-its own URL, which it must. The answer is the one search engines documented
-twenty years ago: the copy names the original.
+The real risk is duplicate content. It appears when the Markdown gets its own
+URL, which it must. The fix is standard: the copy names the original.
 
 ```http
 Link: <https://example.com/about>; rel="canonical"
 ```
 
-Every Markdown response here sets that header, and every `.md` file repeats it
-in its front matter for the case where the file is saved, piped or passed
-between tools and the headers are gone.
+Every Markdown response sets this header. Every `.md` file repeats it in its
+front matter, for the case where the file is saved or piped somewhere and the
+headers are lost.
 
 ## How it works
 
 ```
 src/
-  site.config.ts        identity, agent policy, and what a twin says about itself
-  content/pages/*.md    the home and about pages. Markdown, because the twin is the source
+  site.config.ts        name, origin, crawler policy, Markdown policy
+  content/pages/*.md    the home and about pages
   content/blog/*.md     the posts
-  lib/markdown.ts       the bytes a twin is made of: front matter plus the authored body
-  lib/pages.ts          every page, resolved once, read by every route and the tests
-  lib/negotiation.ts    the Accept rules, in a file with no runtime imports so they are testable
-  pages/[...slug].md.ts the twins, generated at build time, one file per page
-  pages/llms.txt.ts     an index for agents, linking .md
+  lib/markdown.ts       builds a twin: front matter plus the authored body
+  lib/pages.ts          the list of pages. Every route and test reads it
+  lib/negotiation.ts    the Accept rules. No runtime imports, so they are testable
+  pages/[...slug].md.ts builds one .md file per page
+  pages/llms.txt.ts     an index for agents, linking to .md
   pages/llms-full.txt.ts  every page in one response
   pages/robots.txt.ts   Allow, plus Content-Signal
-  pages/sitemap.xml.ts  HTML pages only, never the twins
-worker/index.ts         optional: negotiation, canonical header, discovery headers
-scripts/check-twins.mjs runs in CI: every page has a twin, every twin has a canonical
+  pages/sitemap.xml.ts  HTML pages only
+worker/index.ts         optional: negotiation and headers
+scripts/check-twins.mjs runs in CI
 skills/md-twins/        the procedure as a skill, symlinked into .claude/skills/
 ```
 
-One source, two outputs, and no step in which anything is converted back:
+The Markdown is the source. The HTML is rendered from it.
 
 ```text
-  src/content/pages/about.md          authored once, by a person
+  src/content/pages/about.md          written once, by a person
           │
           │  frontmatter: title, description, updated
           │  body:        the Markdown
           │
           ├──▶ src/pages/[page].astro ────────────▶ dist/about.html
-          │      renders the body into a layout       the page a person reads
+          │      renders the body into a layout       what a person reads
           │
           └──▶ src/pages/[...slug].md.ts ─────────▶ dist/about.md
-                 re-emits the body verbatim,          the page a machine reads
-                 adding canonical: to the frontmatter
+                 copies the body unchanged,           what a machine reads
+                 adds canonical: to the front matter
 
-  Both routes read src/lib/pages.ts, which is also what llms.txt,
-  sitemap.xml and scripts/check-twins.mjs read. One list, four consumers.
+  Both routes read src/lib/pages.ts. So do llms.txt, sitemap.xml
+  and scripts/check-twins.mjs. One list, four consumers.
 ```
 
-**The twin is the source, not a conversion.** Every page whose words matter is
-a Markdown file that the HTML is rendered from. The usual approach, converting
-your rendered HTML back to Markdown, works on the day you build it and then
-drifts: a component renders something the converter cannot see, a heading moves
-into a tab, and the Markdown quietly stops being the page. You find out when a
-model quotes you saying something you no longer say.
+Most sites do the opposite. They convert their rendered HTML back to Markdown.
+That works on the first day. Then a component renders something the converter
+cannot read. A heading moves into a tab. The Markdown stops matching the page,
+and nothing reports it.
 
-**One list of pages.** Routes, `llms.txt`, the sitemap and the tests all read
-`src/lib/pages.ts`, so a page cannot exist in one and be missing from another.
+The Worker is optional. Remove `main` and `assets.binding` from
+`wrangler.jsonc` and this is a plain static site. You keep the twins. You lose
+negotiation and the canonical header.
 
-**The Worker is optional.** Delete `main` and `assets.binding` from
-`wrangler.jsonc` and this is a plain static site on any host: you keep the
-twins, you lose negotiation and the header-set canonical. Since the twins are
-what crawlers actually fetch, that is a smaller loss than it sounds.
+## Four rules you must not break
 
-## The four things that are easy to get wrong
-
-1. **`Vary: Accept`**, on both branches. One URL with two representations must
-   tell caches to key on Accept. Without it a cached HTML response is replayed
-   to the next client that asked for Markdown, and the bug only appears under
-   load.
-2. **`Content-Type: text/markdown; charset=utf-8`.** Some CDNs serve `.md` as
-   `application/octet-stream`, which makes browsers download it and some agents
-   skip it. `curl -sI https://your-site/about.md` is the check.
-3. **The twins stay out of `sitemap.xml`.** A sitemap entry asks for that URL
-   to be indexed, which contradicts the canonical on the twin. Contradictory
-   signals get resolved by the crawler, not always in your favour.
-4. **No `Disallow: /*.md$`.** It is the reflex fix for duplicate content and it
-   blocks exactly the traffic this whole design exists to serve. Use the
-   canonical. If you cannot set headers on your host, set
-   `markdownPolicy: 'noindex'` in `src/site.config.ts` and understand the
-   trade-off, which is documented there.
-
-## Measuring your own
-
-The numbers at the top of this file are the reason to build this, and they are
-site-specific. Get your own before and after:
-
-- **Cloudflare AI Crawl Control** verifies crawler identity against each
-  operator's published IP ranges. Trust it over any User-Agent count.
-- **`worker/index.ts` logs one structured line per AI crawler hit**, carrying
-  `kind: 'markdown' | 'page' | 'asset'`. That field is the whole measurement:
-  without the split you know a crawler came by, not whether it took the
-  Markdown. `npx wrangler tail` shows it live.
-- Keep the daily series somewhere you own. Most analytics products hold
-  path-level detail for days and then aggregate it away, which is exactly the
-  resolution this question needs.
+1. **Set `Vary: Accept` on both branches.** One URL returns two
+   representations. Caches must key on `Accept`. Without this header, a cached
+   HTML response is served to a client that asked for Markdown. The bug only
+   appears under load.
+2. **Set `Content-Type: text/markdown; charset=utf-8`.** Some CDNs serve `.md`
+   as `application/octet-stream`. Browsers then download the file, and some
+   agents skip it. Check with `curl -sI https://your-site/about.md`.
+3. **Keep the twins out of `sitemap.xml`.** A sitemap entry asks for that URL
+   to be indexed. The canonical on the twin says the opposite. The crawler
+   resolves the conflict, and not always in your favour.
+4. **Do not add `Disallow: /*.md$`.** It is the usual fix for duplicate
+   content. It also blocks the crawlers this template is built for. Use the
+   canonical instead. If your host cannot set headers, set
+   `markdownPolicy: 'noindex'` in `src/site.config.ts` and read the trade-off
+   documented there.
 
 ## Deploying
 
-The build is static, so any host that serves files works. What differs between
-hosts is only how much of the machine-facing half survives.
+The build is static. Any host that serves files works. Hosts differ in how much
+of the machine-facing half survives.
 
-**Cloudflare Workers** is what this repository is set up for, and the only host
-where everything works with no extra configuration:
+**Cloudflare Workers** needs no extra configuration:
 
 ```bash
 npm run deploy      # builds, then wrangler deploy
 ```
 
-`wrangler.jsonc` serves `dist/` through the assets binding with
-`run_worker_first`, so `worker/index.ts` adds content negotiation, the
-canonical header on Markdown responses and the discovery headers. Cloudflare
-also gives you AI Crawl Control, which is the one place you can read verified
-crawler traffic rather than User-Agent guesses.
+`wrangler.jsonc` serves `dist/` through the assets binding, with
+`run_worker_first`. The Worker then adds negotiation, the canonical header and
+the discovery headers. Cloudflare also provides AI Crawl Control, which reports
+verified crawler traffic.
 
-**Anywhere else** works too, and this is deliberate. Delete `main` and
-`assets.binding` from `wrangler.jsonc`, or ignore them, and deploy `dist/` to
-Netlify, Vercel, GitHub Pages, S3 behind CloudFront, or an nginx you own. You
-keep the `.md` twins, `llms.txt`, `llms-full.txt`, `robots.txt` and the
-`<link rel="alternate">` in every page head, which is the half that carries the
-traffic.
-
-What you give up without a host that can set response headers per file:
+**Other hosts** work too. Deploy `dist/` to Netlify, Vercel, GitHub Pages, S3
+or your own nginx. You keep the twins, `llms.txt`, `llms-full.txt`,
+`robots.txt` and the `<link rel="alternate">` tag in every page.
 
 | | With the Worker | Static host only |
 | :--- | :--- | :--- |
 | `<page>.md` | yes | yes |
-| `Accept: text/markdown` on the page URL | yes | no |
-| `Link: <page>; rel="canonical"` on Markdown | yes | front matter only |
-| `Vary: Accept` | yes | not needed, nothing negotiates |
-| `Content-Type: text/markdown` | pinned by the Worker | whatever the host infers |
+| `Accept: text/markdown` | yes | no |
+| `Link: rel="canonical"` on Markdown | yes | front matter only |
+| `Vary: Accept` | yes | not needed |
+| `Content-Type: text/markdown` | set by the Worker | set by the host |
 
-Netlify reads `public/_headers`, so it can pin most of that itself. On a host
-that cannot set headers on `.md` files at all, set
-`markdownPolicy: 'noindex'` in `src/site.config.ts` and read the trade-off
-documented there: without a canonical header, telling search engines to skip
-the twins is the safer of the two imperfect options.
+Netlify reads `public/_headers`, so it can set most of this itself. If your
+host cannot set headers on `.md` files, set `markdownPolicy: 'noindex'` in
+`src/site.config.ts`.
 
-## Making it yours
+## Measure your own site
 
-1. Replace `src/content/pages/` and `src/content/blog/` with your content, and
-   set your name, description and origin in `src/site.config.ts` and
-   `astro.config.ts`. Replacing `src/content/` deletes this template's own
-   documentation from your clone, which is intended: the copy that matters
-   lives in this README and in AGENTS.md, and both survive.
-2. Decide the Markdown policy in `src/site.config.ts`: `canonical` (default) or
+The numbers above are specific to one site. Measure yours before and after.
+
+- **Cloudflare AI Crawl Control** verifies crawler identity against each
+  operator's published IP ranges. Trust it over User-Agent counts.
+- **The Worker logs one line per AI crawler request.** Each line carries
+  `kind: 'markdown' | 'page' | 'asset'`. That field is the measurement. Without
+  it you know a crawler arrived. You do not know what it took. Run
+  `npx wrangler tail` to watch it.
+- **Store the daily counts yourself.** Most analytics products keep path-level
+  detail for a few days, then aggregate it away.
+
+## Make it yours
+
+1. Replace `src/content/pages/` and `src/content/blog/` with your content. Set
+   your name, description and origin in `src/site.config.ts` and
+   `astro.config.ts`.
+2. Choose the Markdown policy in `src/site.config.ts`: `canonical` (default) or
    `noindex`.
-3. Point the URLs in `SECURITY.md`, `CODE_OF_CONDUCT.md` and
-   `.github/ISSUE_TEMPLATE/config.yml` at your repository, or delete those
-   files. They name this project's maintainer, who cannot act on anything in
-   yours.
-4. `npm test`, then deploy. `npm run deploy` publishes to Cloudflare Workers;
-   any static host works without the Worker.
+3. Update the URLs in `SECURITY.md`, `CODE_OF_CONDUCT.md` and
+   `.github/ISSUE_TEMPLATE/config.yml`, or delete those files. They point at
+   this project's maintainer.
+4. Run `npm test`, then deploy.
 
 ## Status and licence
 
-A working example, maintained on a best-effort basis by one person. Not a
-published package: fork it, read it, take the parts you want.
+A working example. One person maintains it, on a best-effort basis. It is not a
+published package. Fork it and take what you need.
 
 MIT. See [LICENSE](./LICENSE), [CONTRIBUTING.md](./CONTRIBUTING.md) and
 [SECURITY.md](./SECURITY.md).
 
+[AGENTS.md](./AGENTS.md) is the manual for an AI agent working in this
+repository. `CLAUDE.md` is a symlink to it.
+
 ## Sources
 
-- [Markdown, llms.txt and AI crawlers](https://dri.es/markdown-llms-txt-and-ai-crawlers), Dries Buytaert: per-crawler Markdown adoption, the "no crawler uses content negotiation" finding, crawl-to-citation ratio.
-- [Introducing Markdown for Agents](https://blog.cloudflare.com/markdown-for-agents/), Cloudflare: the token benchmark and the zone-level negotiation feature.
-- [Markdown for AI crawlers: content negotiation and token economics](https://www.ekamoira.com/blog/how-to-serve-markdown-to-ai-crawlers-content-negotiation-token-economics-guide): the cloaking distinction, the header checklist, collected benchmarks.
-- [RFC 7763](https://www.rfc-editor.org/rfc/rfc7763): the `text/markdown` media type.
-- [Markdown for Agents](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/), Cloudflare docs, and [Markdown for agents](https://docs.readthedocs.com/platform/latest/reference/markdown-for-agents.html), Read the Docs: two production implementations of the `Accept` header.
+- [Markdown, llms.txt and AI crawlers](https://dri.es/markdown-llms-txt-and-ai-crawlers), Dries Buytaert. Per-crawler adoption, the content negotiation finding, the crawl-to-citation ratio.
+- [Introducing Markdown for Agents](https://blog.cloudflare.com/markdown-for-agents/), Cloudflare. The token benchmark and the zone feature.
+- [Markdown for AI crawlers: content negotiation and token economics](https://www.ekamoira.com/blog/how-to-serve-markdown-to-ai-crawlers-content-negotiation-token-economics-guide). The cloaking distinction and the header checklist.
+- [RFC 7763](https://www.rfc-editor.org/rfc/rfc7763). The `text/markdown` media type.
+- [Markdown for Agents](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/), Cloudflare docs, and [Markdown for agents](https://docs.readthedocs.com/platform/latest/reference/markdown-for-agents.html), Read the Docs. Two production implementations.
 - My own figures come from the crawl log of `ai-glot.com/docs`, collected daily from Cloudflare's verified-bot data.
