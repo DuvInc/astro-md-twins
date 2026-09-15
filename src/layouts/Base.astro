@@ -1,0 +1,159 @@
+---
+import { getCollection } from 'astro:content';
+
+import { site } from '../site.config';
+import { markdownPathFor } from '../lib/pages';
+import MarkdownLink from '../components/MarkdownLink.astro';
+import '../styles/global.css';
+
+interface Props {
+  /** The page's own path: `/`, `/about`, `/blog/a-post`. */
+  path: string;
+  title: string;
+  description: string;
+  /** Set on pages that have no Markdown twin, if you ever add one. */
+  twin?: boolean;
+}
+
+const { path, title, description, twin = true } = Astro.props;
+
+const canonical = new URL(path, site.url).href;
+const markdownUrl = new URL(markdownPathFor(path), site.url).href;
+
+const nav = (await getCollection('pages'))
+  .filter(entry => entry.data.nav !== undefined)
+  .sort((a, b) => (a.data.nav ?? 99) - (b.data.nav ?? 99))
+  .map(entry => ({
+    href: entry.id === 'index' ? '/' : `/${entry.id}`,
+    label: entry.data.navLabel ?? entry.data.title,
+  }));
+
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    {
+      twin && (
+        <>
+          {/*
+            The declaration a rendering client reads. `Link` headers say the
+            same thing to a client that only issues a HEAD, and the two are
+            deliberately redundant: an agent that parses HTML and an agent that
+            reads headers are different programs, and neither is obliged to do
+            the other's work.
+          */}
+          <link rel="alternate" type="text/markdown" href={markdownUrl} title="This page as Markdown" />
+          {/* An older spelling some tools still look for. One extra line. */}
+          <meta name="markdown-url" content={markdownUrl} />
+        </>
+      )
+    }
+
+    <link rel="alternate" type="text/plain" href={new URL('/llms.txt', site.url).href} title="llms.txt" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header>
+      <div class="page bar">
+        <a class="brand" href="/">{site.name}</a>
+        <nav aria-label="Main">
+          {nav.map(link => <a href={link.href}>{link.label}</a>)}
+          <a href="/blog">Writing</a>
+        </nav>
+        {twin && <MarkdownLink path={path} />}
+      </div>
+    </header>
+
+    <main id="main"><slot /></main>
+
+    <footer>
+      <div class="page foot">
+        <span class="meta">&copy; {year} {site.name}</span>
+        <span class="meta">
+          <a href="/llms.txt">llms.txt</a> · <a href="/llms-full.txt">llms-full.txt</a> ·
+          <a href="/robots.txt">robots.txt</a> · <a href="/sitemap.xml">sitemap</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  header {
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    z-index: 10;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 4rem;
+  }
+
+  .brand {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    margin-right: auto;
+  }
+
+  nav {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.9375rem;
+  }
+
+  nav a {
+    text-decoration: none;
+    color: var(--muted);
+  }
+
+  nav a:hover { color: var(--ink); }
+
+  footer {
+    border-top: 1px solid var(--line);
+    margin-top: 4rem;
+    padding-block: 2rem;
+  }
+
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .foot a { color: var(--muted); }
+
+  @media (max-width: 34rem) {
+    .bar { gap: 0.9rem; }
+    nav { gap: 0.9rem; }
+  }
+</style>

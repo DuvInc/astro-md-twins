@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.DS_Store
+
+# Editor tooling. Local convenience, machine-specific, nothing in the build
+# reads it. `.claude/skills/` is the exception below: the skill is part of what
+# this repository publishes.
+.vscode/
+.idea/
+.claude/*
+!.claude/skills/
+
+.env
+.env.*
+!.env.example

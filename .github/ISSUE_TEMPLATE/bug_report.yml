@@ -1,0 +1,38 @@
+name: Bug report
+description: Something does not work the way this repository says it does.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >
+        The smallest content and config that shows it. For anything about
+        headers or negotiation, paste `curl -sI` output rather than describing
+        it.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit and Node version
+    validations:
+      required: true
+  - type: dropdown
+    id: worker
+    attributes:
+      label: Are you running the Worker?
+      options:
+        - "Yes, Cloudflare Workers"
+        - "No, static host only"
+        - "Local dev only"
+    validations:
+      required: true

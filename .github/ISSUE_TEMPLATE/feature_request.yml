@@ -1,0 +1,26 @@
+name: Feature request
+description: Something this repository should be able to express and cannot.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence, if this is about crawler behaviour
+      description: >
+        A measurement from your own logs, or a published source. The README is
+        careful to claim only what it can support, and changes to that section
+        are held to the same standard.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This does not require the Cloudflare Worker to become mandatory.
+        - label: This does not need a new dependency, or I have said why it does.

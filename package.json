@@ -1,0 +1,29 @@
+{
+  "name": "astro-md-twins",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An Astro site that serves every page twice: HTML for people, Markdown for machines, at the same URL and without the duplicate-content penalty.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "worker:dev": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "check:twins": "node scripts/check-twins.mjs",
+    "test": "npm run build && node --test test/*.test.mjs && npm run check:twins"
+  },
+  "dependencies": {
+    "astro": "7.3.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "typescript": "5.9.3",
+    "wrangler": "4.42.0"
+  }
+}

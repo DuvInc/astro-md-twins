@@ -1,0 +1,31 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection, render } from 'astro:content';
+
+import Base from '../layouts/Base.astro';
+
+/**
+ * Every static page except the home page, from `src/content/pages/`.
+ *
+ * Adding a page is adding a Markdown file. It gets a route, a Markdown twin, a
+ * sitemap entry and an llms.txt line without anyone remembering to add it in
+ * four places, because all four read `src/lib/pages.ts`.
+ */
+export const getStaticPaths = (async () => {
+  const pages = await getCollection('pages');
+  return pages
+    .filter(entry => entry.id !== 'index')
+    .map(entry => ({ params: { page: entry.id }, props: { entry } }));
+}) satisfies GetStaticPaths;
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<Base path={`/${entry.id}`} title={entry.data.title} description={entry.data.description}>
+  <article class="section page">
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</Base>

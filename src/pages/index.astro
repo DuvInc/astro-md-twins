@@ -1,0 +1,54 @@
+---
+import { getEntry, render } from 'astro:content';
+
+import Base from '../layouts/Base.astro';
+import { getBlogPosts } from '../lib/pages';
+
+/**
+ * The home page, rendered from `src/content/pages/index.md`.
+ *
+ * The words live in Markdown even here, where it would be easier to type them
+ * into the template. That is what lets `/index.md` be the same content rather
+ * than an approximation of it, and it is the discipline the whole repository
+ * rests on: if a sentence only exists in an .astro file, its Markdown twin
+ * cannot contain it.
+ */
+const entry = await getEntry('pages', 'index')!;
+const { Content } = await render(entry);
+const posts = (await getBlogPosts()).slice(0, 3);
+
+const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base path="/" title={entry.data.title} description={entry.data.description}>
+  <section class="section page">
+    <div class="prose">
+      <Content />
+    </div>
+  </section>
+
+  <section class="section page">
+    <h2>Recent writing</h2>
+    <ul class="posts">
+      {
+        posts.map(post => (
+          <li>
+            <a href={`/blog/${post.id}`}>
+              <h3>{post.data.title}</h3>
+              <p class="meta">{post.data.description}</p>
+              <p class="meta">{dateFormat.format(post.data.date)}</p>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .posts { list-style: none; margin: 2rem 0 0; padding: 0; }
+  .posts li + li { border-top: 1px solid var(--line); }
+  .posts a { display: block; padding: 1.5rem 0; text-decoration: none; }
+  .posts a:hover h3 { text-decoration: underline; }
+  .posts p { margin-bottom: 0.25rem; }
+</style>

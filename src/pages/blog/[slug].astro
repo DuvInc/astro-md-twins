@@ -1,0 +1,43 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+
+import Base from '../../layouts/Base.astro';
+import { site } from '../../site.config';
+import { getBlogPosts } from '../../lib/pages';
+
+export const getStaticPaths = (async () => {
+  const posts = await getBlogPosts();
+  return posts.map(post => ({ params: { slug: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base
+  path={`/blog/${post.id}`}
+  title={`${post.data.title} · ${site.name}`}
+  description={post.data.description}
+>
+  <article class="section page">
+    <header class="measure">
+      <p class="meta">
+        {dateFormat.format(post.data.date)}
+        {post.data.author && <> · {post.data.author}</>}
+      </p>
+      <h1 style="margin-top:0.75rem">{post.data.title}</h1>
+      <p class="lead" style="margin-top:1.25rem">{post.data.description}</p>
+    </header>
+
+    <hr />
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    <p style="margin-top:3rem"><a href="/blog">&larr; All writing</a></p>
+  </article>
+</Base>

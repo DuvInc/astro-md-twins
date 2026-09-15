@@ -1,0 +1,48 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getBlogPosts } from '../../lib/pages';
+
+const posts = await getBlogPosts();
+const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base
+  path="/blog"
+  title="Writing"
+  description="Notes on publishing for readers who are not people."
+>
+  <section class="section page">
+    <h1>Writing</h1>
+    <p class="lead measure" style="margin-top:1.5rem">
+      Notes on publishing for readers who are not people.
+    </p>
+  </section>
+
+  <section class="section page">
+    <ul class="posts">
+      {
+        posts.map(post => (
+          <li>
+            <a href={`/blog/${post.id}`}>
+              <h2>{post.data.title}</h2>
+              <p class="meta">{post.data.description}</p>
+              <p class="meta">
+                {dateFormat.format(post.data.date)}
+                {post.data.author && <> · {post.data.author}</>}
+              </p>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .posts { list-style: none; margin: 0; padding: 0; }
+  .posts li + li { border-top: 1px solid var(--line); }
+  .posts a { display: block; padding: 1.75rem 0; text-decoration: none; }
+  .posts a:hover h2 { text-decoration: underline; }
+  .posts h2 { font-size: 1.25rem; }
+  .posts p { margin: 0.4rem 0 0; }
+</style>
