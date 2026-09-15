@@ -39,6 +39,7 @@ to break.
 | `src/pages/llms.txt.ts`, `llms-full.txt.ts`, `robots.txt.ts`, `sitemap.xml.ts` | the machine surfaces |
 | `worker/index.ts` | optional Cloudflare Worker: negotiation, canonical and discovery headers |
 | `scripts/check-twins.mjs` | the CI gate |
+| `skills/md-twins/SKILL.md` | the procedure, as a skill. Symlinked from `.claude/skills/` so Claude Code finds it |
 
 ## Commands
 

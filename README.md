@@ -164,6 +164,7 @@ src/
   pages/sitemap.xml.ts  HTML pages only, never the twins
 worker/index.ts         optional: negotiation, canonical header, discovery headers
 scripts/check-twins.mjs runs in CI: every page has a twin, every twin has a canonical
+skills/md-twins/        the procedure as a skill, symlinked into .claude/skills/
 ```
 
 One source, two outputs, and no step in which anything is converted back:
@@ -232,6 +233,47 @@ site-specific. Get your own before and after:
 - Keep the daily series somewhere you own. Most analytics products hold
   path-level detail for days and then aggregate it away, which is exactly the
   resolution this question needs.
+
+## Deploying
+
+The build is static, so any host that serves files works. What differs between
+hosts is only how much of the machine-facing half survives.
+
+**Cloudflare Workers** is what this repository is set up for, and the only host
+where everything works with no extra configuration:
+
+```bash
+npm run deploy      # builds, then wrangler deploy
+```
+
+`wrangler.jsonc` serves `dist/` through the assets binding with
+`run_worker_first`, so `worker/index.ts` adds content negotiation, the
+canonical header on Markdown responses and the discovery headers. Cloudflare
+also gives you AI Crawl Control, which is the one place you can read verified
+crawler traffic rather than User-Agent guesses.
+
+**Anywhere else** works too, and this is deliberate. Delete `main` and
+`assets.binding` from `wrangler.jsonc`, or ignore them, and deploy `dist/` to
+Netlify, Vercel, GitHub Pages, S3 behind CloudFront, or an nginx you own. You
+keep the `.md` twins, `llms.txt`, `llms-full.txt`, `robots.txt` and the
+`<link rel="alternate">` in every page head, which is the half that carries the
+traffic.
+
+What you give up without a host that can set response headers per file:
+
+| | With the Worker | Static host only |
+| :--- | :--- | :--- |
+| `<page>.md` | yes | yes |
+| `Accept: text/markdown` on the page URL | yes | no |
+| `Link: <page>; rel="canonical"` on Markdown | yes | front matter only |
+| `Vary: Accept` | yes | not needed, nothing negotiates |
+| `Content-Type: text/markdown` | pinned by the Worker | whatever the host infers |
+
+Netlify reads `public/_headers`, so it can pin most of that itself. On a host
+that cannot set headers on `.md` files at all, set
+`markdownPolicy: 'noindex'` in `src/site.config.ts` and read the trade-off
+documented there: without a canonical header, telling search engines to skip
+the twins is the safer of the two imperfect options.
 
 ## Making it yours
 

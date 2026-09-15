@@ -5,8 +5,13 @@ dist/
 .DS_Store
 
 # Editor tooling. Local convenience, machine-specific, nothing in the build
-# reads it. `.claude/skills/` is the exception below: the skill is part of what
-# this repository publishes.
+# reads it.
+#
+# `.claude/skills/` is the one exception, and it holds symlinks rather than
+# files: the skills themselves live in `skills/` at the root, where anyone
+# browsing the repository finds them, and this directory is what makes Claude
+# Code discover them automatically. One copy, two entry points, same as
+# CLAUDE.md pointing at AGENTS.md.
 .vscode/
 .idea/
 .claude/*
