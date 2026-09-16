@@ -50,19 +50,18 @@ than on the same content as HTML.
 
 Two measurements from server logs, not from vendors.
 
-The first is my own documentation site, `ai-glot.com/docs`. The window is 19
-August to 14 September 2026. Only Cloudflare-verified bots are counted, so no
-User-Agent is trusted. The table counts document requests only: HTML pages plus
-Markdown twins.
+The first is my own documentation site, over four weeks. Only
+Cloudflare-verified bots are counted. The share is of documents fetched, so
+HTML pages plus Markdown twins.
 
-| Crawler | Documents fetched | Taken as `.md` | Share |
-| :--- | ---: | ---: | ---: |
-| GoogleOther | 312 | 146 | **46.8%** |
-| GPTBot | 1,134 | 484 | **42.7%** |
-| ClaudeBot | 485 | 167 | 34.4% |
-| Amazonbot | 1,657 | 276 | 16.7% |
-| PetalBot | 8,788 | 1,159 | 13.2% |
-| meta-externalagent | 9,013 | 1,025 | 11.4% |
+| Crawler | Fetched as `.md` |
+| :--- | ---: |
+| GoogleOther | **46.8%** |
+| GPTBot | **42.7%** |
+| ClaudeBot | 34.4% |
+| Amazonbot | 16.7% |
+| PetalBot | 13.2% |
+| meta-externalagent | 11.4% |
 
 The second is Dries Buytaert's site. He measured GPTBot at 34.8% and
 OAI-SearchBot at 22.7%. ClaudeBot was much lower, at 2.1%.
