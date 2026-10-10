@@ -156,7 +156,7 @@ src/
   pages/sitemap.xml.ts  HTML pages only
 worker/index.ts         optional: negotiation and headers
 scripts/check-twins.mjs runs in CI
-skills/md-twins/        the procedure as a skill, symlinked into .claude/skills/
+skills/md-twins/        the procedure as a skill
 ```
 
 The Markdown is the source. The HTML is rendered from it.
