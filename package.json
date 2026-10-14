@@ -19,7 +19,7 @@
     "test": "npm run build && node --test test/*.test.mjs && npm run check:twins"
   },
   "dependencies": {
-    "astro": "7.3.2"
+    "astro": "7.3.8"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
