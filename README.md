@@ -1,5 +1,7 @@
 # astro-md-twins
 
+![astro-md-twins: a dithered banner with the project name and its one-line summary](docs/hero.png)
+
 Every page on this site exists twice. Once as HTML, for people. Once as
 Markdown, for machines.
 
