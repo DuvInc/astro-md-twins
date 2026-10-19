@@ -112,7 +112,7 @@ hr {
   margin: 0 0 1rem;
 }
 
-.lead { font-size: 1.125rem; color: var(--muted); }
+.lead { font-size: 1.125rem; color: var(--muted); text-wrap: balance; }
 
 /* ---------------------------------------------------------------- pieces */
 
