@@ -79,6 +79,18 @@ rely on Node stripping the types, which is unflagged from 22.18.
    `llms.txt`, from `<link rel="alternate">` and from the `Link` header. They
    are not in the sitemap, and they are not `Disallow`ed either.
 
+## Renamed, withdrawn and translated pages
+
+- **Renaming or deleting a page**: add it to `moved` or `gone` in
+  `src/site.config.ts`. The Worker runs first for `.md`, so without an entry the
+  twin 404s. `check-twins` fails if the page is still built.
+- **A page that serves another page's words at its own URL** (an untranslated
+  locale): canonical on the original, `noindex, follow`, no twin of its own, and
+  its head advertises the original's twin. A translated page has its own twin,
+  its own canonical and `language:`. `check-twins` enforces both from the HTML.
+- **Twin links are absolute and `language:` matches `<html lang>`**: both are
+  produced by `toMarkdown` and checked.
+
 ## Do not break these four signals
 
 They are invisible in a browser, so only `npm test` and a `curl -I` will tell
