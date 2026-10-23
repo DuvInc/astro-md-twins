@@ -1,7 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 
-import { site } from '../site.config';
+import { jsonLd, site } from '../site.config';
+import { jsonLdFor, serializeJsonLd } from '../lib/jsonld';
 import { markdownPathFor } from '../lib/pages';
 import MarkdownLink from '../components/MarkdownLink.astro';
 import '../styles/global.css';
@@ -13,9 +14,14 @@ interface Props {
   description: string;
   /** Set on pages that have no Markdown twin, if you ever add one. */
   twin?: boolean;
+  /** Only read when `jsonLd` is on in site.config.ts. `Article` for a post. */
+  kind?: 'WebPage' | 'Article';
+  datePublished?: Date;
+  dateModified?: Date;
+  author?: string;
 }
 
-const { path, title, description, twin = true } = Astro.props;
+const { path, title, description, twin = true, kind = 'WebPage', datePublished, dateModified, author } = Astro.props;
 
 const canonical = new URL(path, site.url).href;
 const markdownUrl = new URL(markdownPathFor(path), site.url).href;
@@ -32,7 +38,7 @@ const year = new Date().getFullYear();
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={site.language}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -58,6 +64,29 @@ const year = new Date().getFullYear();
     }
 
     <link rel="alternate" type="text/plain" href={new URL('/llms.txt', site.url).href} title="llms.txt" />
+
+    {
+      /* Optional, off by default (`jsonLd` in site.config.ts). Only a page with a twin has an
+         `encoding` to declare. */
+      jsonLd && twin && (
+        <script
+          type="application/ld+json"
+          set:html={serializeJsonLd(
+            jsonLdFor({
+              kind,
+              title,
+              description,
+              url: canonical,
+              twin: markdownUrl,
+              language: site.language,
+              datePublished,
+              dateModified,
+              author,
+            }),
+          )}
+        />
+      )
+    }
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />

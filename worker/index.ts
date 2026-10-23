@@ -1,4 +1,5 @@
-import { markdownPolicy } from '../src/site.config';
+import { gone, markdownPolicy, moved } from '../src/site.config';
+import { lifecycleFor } from '../src/lib/lifecycle';
 import {
   isDocument,
   markdownPathFor,
@@ -11,7 +12,7 @@ import {
  *
  * The site is a static build and stays one: every byte served comes out of
  * `dist` through the ASSETS binding, including every Markdown twin, which was
- * written to disk at build time. What this adds is the three things a file on
+ * written to disk at build time. What this adds is the four things a file on
  * disk cannot do:
  *
  *   1. CONTENT NEGOTIATION. `Accept: text/markdown` on an ordinary page URL
@@ -26,7 +27,12 @@ import {
  *      search crawler reads. Without it, publishing every page twice is the
  *      textbook duplicate-content mistake.
  *
- *   3. DISCOVERY HEADERS. A page announces its Markdown twin and the site's
+ *   3. MOVED AND WITHDRAWN PAGES. Because this Worker runs first for every
+ *      document, a renamed page's twin would 404 here even when the host
+ *      redirects the page itself. `moved` and `gone` in site.config.ts are
+ *      applied to the page and its twin, before anything else.
+ *
+ *   4. DISCOVERY HEADERS. A page announces its Markdown twin and the site's
  *      llms.txt in `Link` headers, so a client that issues a HEAD finds both
  *      without parsing HTML.
  *
@@ -60,7 +66,7 @@ const LLMS_TXT = '/llms.txt';
  * everywhere, and `wrangler tail` shows it immediately.
  */
 const AI_CRAWLERS =
-  /(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-User|Claude-SearchBot|PerplexityBot|Perplexity-User|Google-Extended|GoogleOther|Applebot-Extended|meta-externalagent|Amazonbot|CCBot|Bytespider)/i;
+  /(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-User|Claude-SearchBot|PerplexityBot|Perplexity-User|Google-Extended|GoogleOther|Applebot-Extended|meta-externalagent|Amazonbot|CCBot|Bytespider|cohere-ai)/i;
 
 /*
  * `prefersMarkdown`, `isDocument`, `markdownPathFor` and `pagePathFor` live in
@@ -141,6 +147,26 @@ export default {
     }
 
     if (!isDocument(path)) return env.ASSETS.fetch(request);
+
+    /* Before the twin gets a canonical: a withdrawn page's twin must say Gone,
+       not claim a canonical for a URL that no longer exists. */
+    const lifecycle = lifecycleFor(path, moved, gone);
+    if (lifecycle?.status === 410) {
+      return new Response('410 Gone. This page has been withdrawn on purpose.\n', {
+        status: 410,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          /* Crawlers stop asking, but restoring the URL stays quick to land. */
+          'Cache-Control': 'public, max-age=3600',
+        },
+      });
+    }
+    if (lifecycle?.status === 301) {
+      return new Response(null, {
+        status: 301,
+        headers: { Location: lifecycle.location + url.search, 'Cache-Control': 'public, max-age=3600' },
+      });
+    }
 
     /* The `.md` URL, which is the path crawlers use. */
     if (path.endsWith('.md')) {

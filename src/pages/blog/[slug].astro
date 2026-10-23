@@ -21,6 +21,10 @@ const dateFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long
   path={`/blog/${post.id}`}
   title={`${post.data.title} · ${site.name}`}
   description={post.data.description}
+  kind="Article"
+  datePublished={post.data.date}
+  dateModified={post.data.updated}
+  author={post.data.author}
 >
   <article class="section page">
     <header class="measure">

@@ -35,6 +35,8 @@ to break.
 | `src/lib/markdown.ts` | the bytes a twin is made of: front matter plus the authored body |
 | `src/lib/pages.ts` | every page resolved once; routes, feeds and tests all read it |
 | `src/lib/negotiation.ts` | the `Accept` rules, importable without a runtime so they are testable |
+| `src/lib/lifecycle.ts`, `links.ts`, `jsonld.ts` | moved/gone rules, root-relative to absolute links, the optional JSON-LD node. Same rule: no imports, so `test/` runs them |
+| `recipes/html-twins/` | opt-in, not built: twins for pages with no Markdown source. Excluded from `tsconfig.json` |
 | `src/pages/[...slug].md.ts` | the twins, one static file per page |
 | `src/pages/llms.txt.ts`, `llms-full.txt.ts`, `robots.txt.ts`, `sitemap.xml.ts` | the machine surfaces |
 | `worker/index.ts` | optional Cloudflare Worker: negotiation, canonical and discovery headers |

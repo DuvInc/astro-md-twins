@@ -23,6 +23,8 @@ export const site = {
     'Markdown twins for Astro sites: every page also served as clean Markdown, for AI crawlers, answer engines and coding agents.',
   /** The production origin. Also set `site` in astro.config.ts to match. */
   url: 'https://example.com',
+  /** The language of the pages, as a BCP 47 code. Written into every twin's front matter and the page's `<html lang>`. */
+  language: 'en',
 } as const;
 
 export const agents = {
@@ -75,6 +77,7 @@ export const agents = {
     'Amazonbot',
     'Bytespider',
     'CCBot',
+    'cohere-ai',
   ],
 } as const;
 
@@ -95,3 +98,29 @@ export const agents = {
  * `canonical:` key inside the file survives; see AGENTS.md.
  */
 export const markdownPolicy: 'canonical' | 'noindex' = 'canonical';
+
+/**
+ * Pages that moved, and pages withdrawn on purpose. Both empty here.
+ *
+ * The Worker runs first for every document, `.md` twins included, so a page
+ * that is renamed or deleted without an entry here sends its twin to a 404
+ * even if the page itself is redirected by the host. An entry applies to the
+ * page AND its twin.
+ *
+ *   moved: { '/old-slug': '/new-slug' }  -> 301, the `.md` kept on a twin request
+ *   gone:  ['/withdrawn']                -> 410, checked before the canonical
+ *                                           is attached, so a twin never claims
+ *                                           a canonical for a page that is gone
+ *
+ * Paths have no trailing slash and no extension. Use `gone` when the subject
+ * no longer exists; a 301 to something unrelated is the wrong signal for that.
+ */
+export const moved: Record<string, string> = {};
+export const gone: string[] = [];
+
+/**
+ * Optional structured data. Off by default: see "JSON-LD" in the README, which
+ * is honest that no measured effect is known. When on, every page gets a
+ * schema.org node whose `encoding` points at its Markdown twin.
+ */
+export const jsonLd = false;

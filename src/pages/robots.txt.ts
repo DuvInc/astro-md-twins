@@ -43,7 +43,14 @@ export const GET: APIRoute = () => {
     '# Named explicitly rather than left to the wildcard above: several of these',
     '# check for their own group first, and some operators read an unlisted agent',
     '# as an oversight. An explicit rule answers either reading.',
-    ...agents.crawlers.flatMap(crawler => [`User-agent: ${crawler}`, 'Allow: /', '']),
+    /* A crawler that matches a named group reads only that group and never
+       falls back to `*` (RFC 9309), so the signal has to be repeated here or
+       these crawlers see no statement about use at all. One group with several
+       User-agent lines is valid and says it once. */
+    ...agents.crawlers.map(crawler => `User-agent: ${crawler}`),
+    `Content-Signal: ${signals}`,
+    'Allow: /',
+    '',
     `Sitemap: ${url('/sitemap.xml')}`,
     '',
     '# Machine-readable copies of this site:',

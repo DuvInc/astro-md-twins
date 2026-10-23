@@ -11,6 +11,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
+import { absoluteLinks } from '../src/lib/links.ts';
+
 const root = path.resolve(import.meta.dirname, '..');
 const dist = path.join(root, 'dist');
 const read = file => readFileSync(path.join(dist, file), 'utf8');
@@ -35,9 +37,9 @@ test('the twin carries the source file, not a rendering of it', options, () => {
   const twin = read('blog/markdown-twins.md');
 
   /* The body after the front matter must be the authored Markdown, character
-     for character. This is the assertion that fails the day someone swaps the
+     for character, except that root-relative links are absolute. This is the assertion that fails the day someone swaps the
      pipeline for an HTML-to-Markdown converter. */
-  const body = source.slice(source.indexOf('\n---', 4) + 4).trim();
+  const body = absoluteLinks(source.slice(source.indexOf('\n---', 4) + 4).trim(), 'https://example.com');
   const twinBody = twin.slice(twin.indexOf('\n---', 4) + 4).trim();
   assert.equal(twinBody, body);
 

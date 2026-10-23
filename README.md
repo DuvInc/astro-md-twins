@@ -33,8 +33,12 @@ crawler does.
 - A canonical link on every Markdown response. Search engines credit the HTML
   page, not the copy.
 - `llms.txt` and `llms-full.txt`. Both link to the `.md` files.
+- Front matter that travels with the file: `canonical`, `language`, and
+  absolute links, because a twin is read outside the site.
 - A build check. It fails if a page has no twin, a twin has the wrong
-  canonical, a twin is empty, or a twin reached the sitemap.
+  canonical or language, a twin is empty or holds a root-relative link, or a
+  twin reached the sitemap. It reads both Astro build shapes and a split
+  sitemap.
 
 ## Why do this
 
@@ -151,6 +155,9 @@ src/
   lib/markdown.ts       builds a twin: front matter plus the authored body
   lib/pages.ts          the list of pages. Every route and test reads it
   lib/negotiation.ts    the Accept rules. No runtime imports, so they are testable
+  lib/lifecycle.ts      the moved and gone rules, same reason
+  lib/links.ts          root-relative links to absolute, same reason
+  lib/jsonld.ts         the optional JSON-LD node
   pages/[...slug].md.ts builds one .md file per page
   pages/llms.txt.ts     an index for agents, linking to .md
   pages/llms-full.txt.ts  every page in one response
@@ -158,6 +165,7 @@ src/
   pages/sitemap.xml.ts  HTML pages only
 worker/index.ts         optional: negotiation and headers
 scripts/check-twins.mjs runs in CI
+recipes/html-twins/     opt-in: twins for pages with no Markdown source
 skills/md-twins/        the procedure as a skill
 ```
 
@@ -206,6 +214,105 @@ negotiation and the canonical header.
    canonical instead. If your host cannot set headers, set
    `markdownPolicy: 'noindex'` in `src/site.config.ts` and read the trade-off
    documented there.
+
+## Details that bite
+
+- **`_headers` cannot select `*.md`.** Cloudflare's patterns allow one trailing
+  splat, so there is no rule for "every Markdown twin". Anything that has to
+  differ per twin (the charset, a canonical that names a different URL for each
+  response) needs the Worker. `public/_headers` covers the rest.
+- **Non-English twins served without a charset.** The asset layer maps `.md` to
+  `text/markdown` with no `charset`. An English twin never shows it. A French,
+  German or Portuguese twin does: the client guesses the encoding and the
+  accents come out wrong. A production site with five non-English locales shipped
+  exactly this.
+  The Worker sets `charset=utf-8` on every twin, and the build check cannot see
+  it, because a file on disk has no headers. On a host without the Worker, set
+  the type per file or check with `curl -sI`.
+- **Links are absolute in the twin.** The authored Markdown keeps short links
+  (`[pricing](/pricing)`) so the HTML page renders them normally. `toMarkdown`
+  rewrites root-relative inline links, images, reference definitions and
+  `href`/`src` attributes to absolute URLs when it writes the twin, and leaves
+  code blocks and inline code alone. `/pricing` means nothing to a client that
+  holds only the file.
+- **`language:` in the front matter.** The HTML page says `<html lang>`. A file
+  fetched on its own can only say it here. Set `site.language`; the build check
+  fails if the two disagree.
+- **robots.txt names each AI crawler and repeats the signal.** A crawler that
+  matches its own group reads only that group and never falls back to `*`
+  (RFC 9309). A `Content-Signal` only in the `*` group is therefore invisible to
+  exactly the crawlers it is meant for. The generated file puts the signal in
+  the wildcard group and in one shared group listing every named crawler. A
+  directive above the first `User-agent` belongs to no group. The policy is the
+  `agents.contentSignals` object in `src/site.config.ts`, one line to change.
+
+## Moved and withdrawn pages
+
+The Worker runs first for every document, twins included. So when a page is
+renamed, its twin does not follow the host's page redirect: it reaches the
+Worker, finds no file, and answers 404. Two maps in `src/site.config.ts`, empty
+by default, fix that for the page and its twin together:
+
+```ts
+export const moved: Record<string, string> = { '/old-slug': '/new-slug' };
+export const gone: string[] = ['/withdrawn'];
+```
+
+- `moved`: `301` to the new path. A request for `/old-slug.md` goes to
+  `/new-slug.md`.
+- `gone`: `410`, for a page whose subject no longer exists. It is checked before
+  the canonical is attached, so a withdrawn page's twin says Gone instead of
+  claiming a canonical for a URL that is not there. Use a 301 only when the
+  content really is somewhere else.
+
+`npm run check:twins` fails when a `moved` or `gone` page is still built, or when
+a `moved` target is not a built page.
+
+## Sites with languages
+
+If your site has several languages (for example with
+[astro-ai-i18n](https://github.com/DuvInc/astro-ai-i18n)), the twins follow one
+rule: **a page that is its own document gets a twin, a page that is a copy does
+not.**
+
+| | Translated page | Fallback page (original language, at a locale URL) |
+| :--- | :--- | :--- |
+| Words | translated | the original's |
+| `<link rel="canonical">` | itself | the original |
+| `robots` | indexable | `noindex, follow` |
+| Own Markdown twin | yes, with `language: fr` | none |
+| Twin advertised in the head | its own | the original's |
+| `hreflang` | listed | not listed |
+
+A fallback page with its own twin would be a second copy of a copy. Advertising
+the original's twin tells an agent where the clean text is without minting a
+new URL for it. `check-twins` enforces this from the HTML alone: a page whose
+canonical is another page must have no twin, must advertise that page's twin and
+must be `noindex`; a page whose canonical is itself must have a twin. It needs no
+knowledge of your locales.
+
+## Optional: JSON-LD
+
+Off by default. Set `jsonLd = true` in `src/site.config.ts` and every page that
+has a twin gets one `application/ld+json` node (`WebPage`, or `Article` for the
+blog) whose `encoding` is a `MediaObject` with `encodingFormat: text/markdown`
+and `contentUrl` set to the twin. It is a third place saying the twin exists,
+after the `<link rel="alternate">` and the front matter, for a reader that parses
+structured data and nothing else.
+
+There is no measured effect. I have no evidence that any crawler or answer
+engine reads that `encoding` property or acts on it, and I know of no published
+test showing it. It is cheap, valid schema.org, and harmless, which is the whole
+argument for it. Leave it off if you would rather not carry markup nobody has
+shown to matter.
+
+## Exception: pages with no Markdown source
+
+The rule above is that Markdown is the source and a twin is never scraped from
+HTML. Some pages have no Markdown: a home page or a pricing page assembled from
+components. For those, and only those, [recipes/html-twins](recipes/html-twins)
+is a separate opt-in module that converts the built page's `<main>`. It adds
+dependencies, so it is not wired into the template. Read its README first.
 
 ## Deploying
 
@@ -257,7 +364,7 @@ The numbers above are specific to one site. Measure yours before and after.
 1. Replace `src/content/pages/` and `src/content/blog/` with your content. Set
    your name, description and origin in `src/site.config.ts` and
    `astro.config.ts`.
-2. Choose the Markdown policy in `src/site.config.ts`: `canonical` (default) or
+2. Set `site.language` and choose the Markdown policy in `src/site.config.ts`: `canonical` (default) or
    `noindex`.
 3. Update the URLs in `SECURITY.md`, `CODE_OF_CONDUCT.md` and
    `.github/ISSUE_TEMPLATE/config.yml`, or delete those files. They point at

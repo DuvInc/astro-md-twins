@@ -1,6 +1,7 @@
 import type { CollectionEntry } from 'astro:content';
 
 import { markdownPolicy, site } from '../site.config';
+import { absoluteLinks } from './links';
 
 /**
  * The bytes a Markdown twin is made of.
@@ -21,6 +22,8 @@ export interface TwinSource {
   date?: Date;
   updated?: Date;
   author?: string;
+  /** The language of the words, a BCP 47 code. Defaults to `site.language`. */
+  language?: string;
 }
 
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -51,6 +54,9 @@ export function toMarkdown(source: TwinSource): string {
        makes with <link rel="canonical">, and naming it the same thing means a
        reader does not have to be told what it is. */
     `canonical: ${canonical}`,
+    /* The language of the words, which a fetched file cannot otherwise say:
+       the HTML page has `<html lang>`, a twin has only its front matter. */
+    `language: ${source.language ?? site.language}`,
     ...(source.author ? [`author: ${quote(source.author)}`] : []),
     ...(source.date ? [`date: ${iso(source.date)}`] : []),
     ...(source.updated ? [`updated: ${iso(source.updated)}`] : []),
@@ -62,7 +68,7 @@ export function toMarkdown(source: TwinSource): string {
 
   /* One trailing newline, always. A file that ends mid-line concatenates badly
      into llms-full.txt, which is the one place these bodies meet each other. */
-  return `${front}${source.body.trim()}\n`;
+  return `${front}${absoluteLinks(source.body.trim(), site.url)}\n`;
 }
 
 /** A content entry, as the twin sees it. */
@@ -81,5 +87,6 @@ export function twinFromEntry(
     date: data.date,
     updated: data.updated,
     author: data.author,
+    language: site.language,
   };
 }
