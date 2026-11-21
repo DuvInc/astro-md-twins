@@ -382,6 +382,10 @@ MIT. See [LICENSE](./LICENSE), [CONTRIBUTING.md](./CONTRIBUTING.md) and
 [AGENTS.md](./AGENTS.md) is the manual for an AI agent working in this
 repository. `CLAUDE.md` is a symlink to it.
 
+If you run Astro sites for clients and would rather not host them yourself, I
+also build [Atelier201](https://atelier201.com): managed Astro sites that their
+owners edit in a form or by asking an assistant.
+
 ## Sources
 
 - [Markdown, llms.txt and AI crawlers](https://dri.es/markdown-llms-txt-and-ai-crawlers), Dries Buytaert. Per-crawler adoption, the content negotiation finding, the crawl-to-citation ratio.
